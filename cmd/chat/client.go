@@ -6,10 +6,6 @@ import (
 	"github.com/gorilla/websocket"
 )
 
-type UserData struct {
-	Name string `json:"name"`
-}
-
 // client represents a single chatting user.
 type client struct {
 	socket   *websocket.Conn
@@ -28,6 +24,7 @@ func (c *client) read() {
 		}
 		msg.When = time.Now()
 		msg.Name = c.userData.Name
+		msg.AvatarURL = c.userData.AvatarURL
 		c.room.forward <- msg
 	}
 }

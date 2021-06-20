@@ -16,8 +16,8 @@ type authHandler struct {
 }
 
 func (h *authHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	_, err := r.Cookie("auth")
-	if err == http.ErrNoCookie {
+	cookie, err := r.Cookie("auth")
+	if err == http.ErrNoCookie || cookie.Value == "" {
 		w.Header().Set("Location", "/login")
 		w.WriteHeader(http.StatusTemporaryRedirect)
 		return
@@ -38,15 +38,15 @@ func MustAuth(handler http.Handler) http.Handler {
 func loginHandler(w http.ResponseWriter, r *http.Request) {
 	if strings.HasSuffix(r.URL.Path, "callback") {
 		user, err := gothic.CompleteUserAuth(w, r)
-		fmt.Printf("%+q", user)
 		if err != nil {
 			fmt.Fprintln(w, err)
 			return
 		}
 
+		userData := UserData{Name: user.Name, AvatarURL: user.AvatarURL}
 		http.SetCookie(w, &http.Cookie{
 			Name:  "auth",
-			Value: base64EncodeUserData(UserData{Name: user.Name}),
+			Value: base64EncodeUserData(userData),
 			Path:  "/"})
 
 		w.Header().Set("Location", "/chat")
@@ -56,9 +56,10 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// try to get the user without re-authenticating
 	if user, err := gothic.CompleteUserAuth(w, r); err == nil {
+		userData := UserData{Name: user.Name, AvatarURL: user.AvatarURL}
 		http.SetCookie(w, &http.Cookie{
 			Name:  "auth",
-			Value: base64EncodeUserData(UserData{Name: user.Name}),
+			Value: base64EncodeUserData(userData),
 			Path:  "/"})
 
 		w.Header().Set("Location", "/chat")
