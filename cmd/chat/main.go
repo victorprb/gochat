@@ -42,7 +42,7 @@ func main() {
 			"http://localhost:8080/auth/google/callback"),
 	)
 
-	r := newRoom()
+	r := newRoom(UseGravatar)
 	r.tracer = trace.New(os.Stdout)
 
 	// routes

@@ -43,7 +43,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		userData := UserData{Name: user.Name, AvatarURL: user.AvatarURL}
+		userData := UserData{"name": user.Name, "avatar_url": user.AvatarURL, "email": user.Email}
 		http.SetCookie(w, &http.Cookie{
 			Name:  "auth",
 			Value: base64EncodeUserData(userData),
@@ -56,7 +56,7 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 
 	// try to get the user without re-authenticating
 	if user, err := gothic.CompleteUserAuth(w, r); err == nil {
-		userData := UserData{Name: user.Name, AvatarURL: user.AvatarURL}
+		userData := UserData{"name": user.Name, "avatar_url": user.AvatarURL, "email": user.Email}
 		http.SetCookie(w, &http.Cookie{
 			Name:  "auth",
 			Value: base64EncodeUserData(userData),
