@@ -1,13 +1,16 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"strings"
 
+	"github.com/markbates/goth"
 	"github.com/markbates/goth/gothic"
 )
 
@@ -43,30 +46,37 @@ func loginHandler(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		userData := UserData{"name": user.Name, "avatar_url": user.AvatarURL, "email": user.Email}
-		http.SetCookie(w, &http.Cookie{
-			Name:  "auth",
-			Value: base64EncodeUserData(userData),
-			Path:  "/"})
-
-		w.Header().Set("Location", "/chat")
-		w.WriteHeader(http.StatusTemporaryRedirect)
+		storeAuthCookie(w, user)
 		return
 	}
 
 	// try to get the user without re-authenticating
 	if user, err := gothic.CompleteUserAuth(w, r); err == nil {
-		userData := UserData{"name": user.Name, "avatar_url": user.AvatarURL, "email": user.Email}
-		http.SetCookie(w, &http.Cookie{
-			Name:  "auth",
-			Value: base64EncodeUserData(userData),
-			Path:  "/"})
-
-		w.Header().Set("Location", "/chat")
-		w.WriteHeader(http.StatusTemporaryRedirect)
+		storeAuthCookie(w, user)
 	} else {
 		gothic.BeginAuthHandler(w, r)
 	}
+}
+
+// todo: wrap goth.User in an User struct
+func storeAuthCookie(w http.ResponseWriter, user goth.User) {
+	m := md5.New()
+	io.WriteString(m, strings.ToLower(user.Email))
+	userID := fmt.Sprintf("%x", m.Sum(nil))
+
+	userData := UserData{
+		"user_id":    userID,
+		"name":       user.Name,
+		"avatar_url": user.AvatarURL,
+		"email":      user.Email,
+	}
+	http.SetCookie(w, &http.Cookie{
+		Name:  "auth",
+		Value: base64EncodeUserData(userData),
+		Path:  "/"})
+
+	w.Header().Set("Location", "/chat")
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
 func base64EncodeUserData(u UserData) string {
